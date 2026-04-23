@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datenschutz-Wiki · Schule Wald</title>
+
+<!-- Fonts: Fraunces (Display, Serif) + Inter Tight (Body, Sans) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- MSAL 2.x -->
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<!-- Fuse.js für Fuzzy-Suche -->
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js"></script>
+
+<style>
+  :root {
+    --bg: #f5f1e8;
+    --bg-card: #fbf8f1;
+    --ink: #1a1f1b;
+    --ink-soft: #4a4f4a;
+    --ink-mute: #82867f;
+    --accent: #2e5339;
+    --accent-soft: #dce8df;
+    --accent-ink: #1a3a25;
+    --warn: #8b4513;
+    --warn-soft: #f2e4d0;
+    --line: #dcd5c4;
+    --radius: 4px;
+    --shadow: 0 1px 2px rgba(26,31,27,0.04), 0 8px 24px rgba(26,31,27,0.06);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+
+  body {
+    font-family: 'Inter Tight', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    padding: 40px 24px 80px;
+  }
+
+  .container { max-width: 820px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 48px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 36px;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--ink);
+  }
+  .brand h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+  .brand p {
+    color: var(--ink-mute);
+    font-size: 14px;
+    margin-top: 6px;
+  }
+  .user-info {
+    font-size: 13px;
+    color: var(--ink-mute);
+    text-align: right;
+  }
+  .user-info .name { color: var(--ink-soft); font-weight: 500; }
+  .user-info button {
+    background: none; border: none;
+    color: var(--accent); cursor: pointer;
+    font-size: 12px; padding: 4px 0;
+    font-family: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* Login screen */
+  .login-screen {
+    text-align: center;
+    padding: 80px 20px;
+  }
+  .login-screen h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 28px;
+    margin-bottom: 16px;
+  }
+  .login-screen p { color: var(--ink-soft); margin-bottom: 32px; }
+
+  button.primary {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 12px 28px;
+    font-size: 15px;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: background 0.15s;
+  }
+  button.primary:hover { background: var(--accent-ink); }
+  button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Search */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 8px;
+  }
+  .search-input {
+    width: 100%;
+    padding: 18px 56px 18px 20px;
+    font-size: 17px;
+    font-family: inherit;
+    border: 1px solid var(--line);
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    color: var(--ink);
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .search-input::placeholder { color: var(--ink-mute); }
+  .search-icon {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-mute);
+    pointer-events: none;
+  }
+  .search-hint {
+    font-size: 12px;
+    color: var(--ink-mute);
+    margin-bottom: 32px;
+    padding: 0 4px;
+  }
+
+  /* Category filter */
+  .categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 32px;
+  }
+  .cat-chip {
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 5px 12px;
+    font-size: 12px;
+    font-family: inherit;
+    border-radius: 999px;
+    cursor: pointer;
+    color: var(--ink-soft);
+    transition: all 0.15s;
+  }
+  .cat-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .cat-chip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  /* Results */
+  .results { display: flex; flex-direction: column; gap: 16px; }
+  .result-card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    transition: border-color 0.15s, transform 0.15s;
+    animation: fadeIn 0.3s ease-out;
+  }
+  .result-card:hover {
+    border-color: var(--accent-soft);
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .result-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .result-date {
+    font-size: 12px;
+    color: var(--ink-mute);
+  }
+  .result-question {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 1.3;
+    margin-bottom: 12px;
+    letter-spacing: -0.01em;
+  }
+  .result-answer {
+    color: var(--ink-soft);
+    font-size: 15px;
+    line-height: 1.65;
+    margin-bottom: 16px;
+  }
+  .result-source {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--accent);
+    text-decoration: none;
+    padding: 6px 0;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.15s;
+  }
+  .result-source:hover {
+    border-bottom-color: var(--accent);
+  }
+  .result-source svg { flex-shrink: 0; }
+
+  /* Fallback (no results) */
+  .fallback {
+    background: var(--warn-soft);
+    border: 1px solid #d9b88a;
+    border-radius: var(--radius);
+    padding: 32px;
+    text-align: left;
+    animation: fadeIn 0.3s ease-out;
+  }
+  .fallback h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 22px;
+    margin-bottom: 10px;
+    color: var(--warn);
+    letter-spacing: -0.01em;
+  }
+  .fallback p {
+    color: var(--ink-soft);
+    margin-bottom: 20px;
+    font-size: 15px;
+  }
+  .fallback .actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  button.secondary {
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    padding: 10px 20px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: all 0.15s;
+  }
+  button.secondary:hover { border-color: var(--ink-soft); }
+
+  /* Status messages */
+  .status {
+    padding: 14px 18px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    margin: 16px 0;
+    animation: fadeIn 0.3s ease-out;
+  }
+  .status.success {
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    border: 1px solid #b8d4c0;
+  }
+  .status.error {
+    background: #f4dada;
+    color: #7a1f1f;
+    border: 1px solid #d9a8a8;
+  }
+  .status.loading {
+    background: var(--bg-card);
+    color: var(--ink-mute);
+    border: 1px solid var(--line);
+    text-align: center;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--ink-mute);
+    font-style: italic;
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink-mute);
+    text-align: center;
+    line-height: 1.6;
+  }
+  .footer a { color: var(--ink-soft); }
+
+  /* Admin link (only for redactors) */
+  .admin-links {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+  .admin-links a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--accent);
+    padding-bottom: 1px;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 24px 16px 60px; }
+    .brand h1 { font-size: 28px; }
+    .header { flex-direction: column; gap: 16px; }
+    .user-info { text-align: left; }
+    .result-card { padding: 20px; }
+    .result-question { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="login-screen" style="display: none;">
+    <h1 style="font-family: 'Fraunces', serif; font-weight: 400; font-size: 40px; margin-bottom: 12px; letter-spacing: -0.02em;">
+      Datenschutz<em style="color: var(--accent); font-style: italic;">-Wiki</em>
+    </h1>
+    <p style="margin-bottom: 40px; color: var(--ink-soft);">Datenschutzfragen im Schulalltag · Schule Wald</p>
+    <button class="primary" id="btn-login">Anmelden mit Schulkonto</button>
+    <p style="font-size: 12px; color: var(--ink-mute); margin-top: 16px;">Zugriff für Lehrpersonen und Schulleitung</p>
+  </div>
+
+  <!-- Main App -->
+  <div id="main-app" style="display: none;">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="brand">
+        <h1>Datenschutz<em>-Wiki</em></h1>
+        <p>Antworten auf Datenschutzfragen · basierend auf dem Lexikon des DSB Kanton Zürich</p>
+      </div>
+      <div class="user-info">
+        <div class="name" id="user-name">–</div>
+        <button id="btn-logout">Abmelden</button>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrap">
+      <input
+        type="text"
+        class="search-input"
+        id="search-input"
+        placeholder="Stell deine Frage …  z.B. «Darf ich Schülerfotos auf die Website stellen?»"
+        autocomplete="off"
+      >
+      <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
+      </svg>
+    </div>
+    <p class="search-hint">Tippe in natürlicher Sprache. Die Suche erkennt auch Umformulierungen und Tippfehler.</p>
+
+    <!-- Category filters -->
+    <div class="categories" id="categories"></div>
+
+    <!-- Results -->
+    <div id="status"></div>
+    <div id="results" class="results"></div>
+
+    <!-- Footer -->
+    <div class="footer">
+      Die rechtsverbindliche Quelle ist das <a href="https://www.datenschutz.ch/lexika/volksschule" target="_blank" rel="noopener">Lexikon der Datenschutzbeauftragten Kanton Zürich</a>.<br>
+      Bei Unsicherheiten frag die schulische Datenschutzberatung.
+      <div class="admin-links" id="admin-links" style="display: none;">
+        <a href="https://sekwald.sharepoint.com/sites/FD/Lists/Datenschutz_FAQ" target="_blank">FAQ-Liste pflegen</a>
+        <a href="https://sekwald.sharepoint.com/sites/FD/Lists/Datenschutz_Offene_Fragen" target="_blank">Offene Fragen ansehen</a>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  /* ========================================================================
+     CONFIG
+     ======================================================================== */
+  const CONFIG = {
+    clientId: 'f8588401-3bc1-4eb6-a387-f42aca00db89',
+    tenantId: '6c55609f-03ce-4ce1-9550-2cd7c07ad986',
+    redirectUri: 'https://stephangfeller.github.io/datenschutz-wiki/',
+    siteHostname: 'sekwald.sharepoint.com',
+    sitePath: '/sites/FD',
+    listFaq: 'Datenschutz_FAQ',
+    listOpen: 'Datenschutz_Offene_Fragen',
+    dsbEmail: '', // wird auf Mail des eingeloggten Users gesetzt (siehe init)
+    // Erkennt Redaktoren anhand UPN-Suffix oder Rolle. Für den Moment: alle, die eine Mail haben → Footer-Admin-Links werden angezeigt wenn Redaktor.
+    // Wer als Redaktor gilt, einfach hier ergänzen (E-Mail oder UPN):
+    editors: [] // z.B. ['stephan.xy@sekwald.ch']
+  };
+
+  /* ========================================================================
+     MSAL SETUP
+     ======================================================================== */
+  const msalConfig = {
+    auth: {
+      clientId: CONFIG.clientId,
+      authority: `https://login.microsoftonline.com/${CONFIG.tenantId}`,
+      redirectUri: CONFIG.redirectUri
+    },
+    cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false }
+  };
+  const loginRequest = { scopes: ['User.Read', 'Sites.ReadWrite.All', 'Mail.Send'] };
+  const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+  /* ========================================================================
+     STATE
+     ======================================================================== */
+  const state = {
+    account: null,
+    siteId: null,
+    listFaqId: null,
+    listOpenId: null,
+    faqEntries: [],
+    fuse: null,
+    activeCategory: null,
+    lastQuery: ''
+  };
+
+  /* ========================================================================
+     AUTH
+     ======================================================================== */
+  async function getToken() {
+    const account = msalInstance.getActiveAccount();
+    if (!account) throw new Error('Kein aktives Konto');
+    try {
+      const res = await msalInstance.acquireTokenSilent({ ...loginRequest, account });
+      return res.accessToken;
+    } catch (e) {
+      if (e instanceof msal.InteractionRequiredAuthError) {
+        const res = await msalInstance.acquireTokenPopup(loginRequest);
+        return res.accessToken;
+      }
+      throw e;
+    }
+  }
+
+  async function graph(path, options = {}) {
+    const token = await getToken();
+    const res = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Graph ${res.status}: ${err}`);
+    }
+    if (res.status === 204) return null;
+    return res.json();
+  }
+
+  /* ========================================================================
+     UI HELPERS
+     ======================================================================== */
+  const $ = id => document.getElementById(id);
+
+  function showStatus(msg, type = 'loading') {
+    $('status').innerHTML = `<div class="status ${type}">${msg}</div>`;
+  }
+  function clearStatus() { $('status').innerHTML = ''; }
+
+  function escape(s) {
+    if (!s) return '';
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    try {
+      return new Date(iso).toLocaleDateString('de-CH', { year: 'numeric', month: 'long' });
+    } catch { return ''; }
+  }
+
+  /* ========================================================================
+     LOAD SITE & LISTS
+     ======================================================================== */
+  async function loadContext() {
+    const site = await graph(`/sites/${CONFIG.siteHostname}:${CONFIG.sitePath}`);
+    state.siteId = site.id;
+
+    const lists = await graph(`/sites/${state.siteId}/lists?$filter=displayName eq '${CONFIG.listFaq}' or displayName eq '${CONFIG.listOpen}'`);
+    for (const l of lists.value) {
+      if (l.displayName === CONFIG.listFaq) state.listFaqId = l.id;
+      if (l.displayName === CONFIG.listOpen) state.listOpenId = l.id;
+    }
+    if (!state.listFaqId) throw new Error(`Liste "${CONFIG.listFaq}" nicht gefunden`);
+    if (!state.listOpenId) throw new Error(`Liste "${CONFIG.listOpen}" nicht gefunden`);
+  }
+
+  async function loadFaq() {
+    const data = await graph(`/sites/${state.siteId}/lists/${state.listFaqId}/items?$expand=fields&$top=500`);
+    state.faqEntries = data.value.map(item => {
+      const f = item.fields || {};
+      let sourceUrl = '', sourceText = '';
+      if (f.Quelle) {
+        // Hyperlink field: either object {Url, Description} or plain string
+        if (typeof f.Quelle === 'object') {
+          sourceUrl = f.Quelle.Url || '';
+          sourceText = f.Quelle.Description || sourceUrl;
+        } else {
+          sourceUrl = f.Quelle;
+          sourceText = f.Quelle;
+        }
+      }
+      return {
+        id: item.id,
+        frage: f.Title || f.Frage || '',
+        antwort: (f.Antwort || '').replace(/<[^>]+>/g, ''), // strip html tags aus Rich Text
+        antwortRaw: f.Antwort || '',
+        kategorie: f.Kategorie || '',
+        schlagworte: f.Schlagworte || '',
+        stand: f.Stand || '',
+        quelleUrl: sourceUrl,
+        quelleText: sourceText
+      };
+    });
+
+    // Fuse.js Setup
+    state.fuse = new Fuse(state.faqEntries, {
+      keys: [
+        { name: 'frage', weight: 3 },
+        { name: 'schlagworte', weight: 2 },
+        { name: 'antwort', weight: 1 },
+        { name: 'kategorie', weight: 0.5 }
+      ],
+      threshold: 0.4,
+      ignoreLocation: true,
+      includeScore: true,
+      minMatchCharLength: 2
+    });
+  }
+
+  /* ========================================================================
+     RENDER
+     ======================================================================== */
+  function renderCategories() {
+    const cats = [...new Set(state.faqEntries.map(e => e.kategorie).filter(Boolean))].sort();
+    const container = $('categories');
+    container.innerHTML = `
+      <button class="cat-chip ${state.activeCategory === null ? 'active' : ''}" data-cat="">Alle</button>
+      ${cats.map(c => `<button class="cat-chip ${state.activeCategory === c ? 'active' : ''}" data-cat="${escape(c)}">${escape(c)}</button>`).join('')}
+    `;
+    container.querySelectorAll('.cat-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.activeCategory = btn.dataset.cat || null;
+        renderCategories();
+        runSearch();
+      });
+    });
+  }
+
+  function renderResults(entries, query) {
+    const results = $('results');
+
+    if (!query && !state.activeCategory) {
+      results.innerHTML = `<div class="empty-state">Stell deine Frage oben in der Suchleiste.<br>Oder wähle eine Kategorie.</div>`;
+      return;
+    }
+
+    if (entries.length === 0) {
+      renderFallback(query);
+      return;
+    }
+
+    results.innerHTML = entries.map(e => `
+      <article class="result-card">
+        <div class="result-meta">
+          <span class="badge">${escape(e.kategorie)}</span>
+          <span class="result-date">Stand: ${formatDate(e.stand)}</span>
+        </div>
+        <h2 class="result-question">${escape(e.frage)}</h2>
+        <p class="result-answer">${escape(e.antwort)}</p>
+        ${e.quelleUrl ? `
+          <a class="result-source" href="${escape(e.quelleUrl)}" target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+            Quelle: DSB Kanton Zürich
+          </a>
+        ` : ''}
+      </article>
+    `).join('');
+  }
+
+  function renderFallback(query) {
+    $('results').innerHTML = `
+      <div class="fallback">
+        <h3>Noch keine Antwort im Wiki</h3>
+        <p>Zu deiner Frage ist aktuell kein Eintrag hinterlegt. Du kannst die Frage an die Datenschutzberatung weiterleiten – sie wird erfasst und beantwortet, und die Antwort fliesst ins Wiki ein.</p>
+        <div class="actions">
+          <button class="primary" id="btn-submit-question">Frage an Datenschutzberatung senden</button>
+          <a href="https://www.datenschutz.ch/lexika/volksschule" target="_blank" rel="noopener">
+            <button class="secondary">Lexikon DSB durchsuchen</button>
+          </a>
+        </div>
+      </div>
+    `;
+    $('btn-submit-question').addEventListener('click', () => submitOpenQuestion(query));
+  }
+
+  /* ========================================================================
+     SEARCH
+     ======================================================================== */
+  function runSearch() {
+    const query = $('search-input').value.trim();
+    state.lastQuery = query;
+
+    let results;
+    if (!query && !state.activeCategory) {
+      results = [];
+    } else if (!query && state.activeCategory) {
+      results = state.faqEntries.filter(e => e.kategorie === state.activeCategory);
+    } else {
+      const hits = state.fuse.search(query);
+      results = hits.map(h => h.item);
+      if (state.activeCategory) {
+        results = results.filter(e => e.kategorie === state.activeCategory);
+      }
+    }
+
+    renderResults(results, query);
+  }
+
+  /* ========================================================================
+     SUBMIT OPEN QUESTION
+     ======================================================================== */
+  async function submitOpenQuestion(query) {
+    if (!query) return;
+    showStatus('Frage wird gesendet …', 'loading');
+
+    try {
+      // 1) Liste-Eintrag in Datenschutz_Offene_Fragen
+      const now = new Date().toISOString();
+      await graph(`/sites/${state.siteId}/lists/${state.listOpenId}/items`, {
+        method: 'POST',
+        body: JSON.stringify({
+          fields: {
+            Title: query.substring(0, 255),
+            Datum: now,
+            Status: 'Neu'
+          }
+        })
+      });
+
+      // 2) Mail an DSB (= eingeloggter User selbst, da du als DSB agierst – oder CONFIG.dsbEmail wenn gesetzt)
+      const toEmail = CONFIG.dsbEmail || state.account.username;
+      const userName = state.account.name || state.account.username;
+
+      const mailBody = {
+        message: {
+          subject: `[Datenschutz-Wiki] Neue unbeantwortete Frage`,
+          body: {
+            contentType: 'HTML',
+            content: `
+              <p><strong>Eine Lehrperson hat eine Frage gestellt, die aktuell nicht im Wiki beantwortet ist:</strong></p>
+              <blockquote style="border-left: 3px solid #2e5339; padding-left: 12px; margin: 16px 0; color: #333;">
+                ${escape(query)}
+              </blockquote>
+              <p>Fragesteller: ${escape(userName)} (${escape(state.account.username)})<br>
+              Zeitpunkt: ${new Date().toLocaleString('de-CH')}</p>
+              <p>Die Frage wurde in der Liste <em>Datenschutz_Offene_Fragen</em> erfasst. Zum Bearbeiten:<br>
+              <a href="https://${CONFIG.siteHostname}${CONFIG.sitePath}/Lists/${CONFIG.listOpen}">Offene Fragen öffnen</a></p>
+            `
+          },
+          toRecipients: [{ emailAddress: { address: toEmail } }]
+        },
+        saveToSentItems: true
+      };
+
+      await graph('/me/sendMail', {
+        method: 'POST',
+        body: JSON.stringify(mailBody)
+      });
+
+      showStatus('Deine Frage wurde erfasst und die Datenschutzberatung wurde informiert. Du erhältst eine Antwort, sobald sie geprüft ist.', 'success');
+      $('search-input').value = '';
+      $('results').innerHTML = '';
+
+    } catch (err) {
+      console.error(err);
+      showStatus(`Fehler beim Senden: ${err.message}. Bitte später nochmals versuchen oder die Datenschutzberatung direkt kontaktieren.`, 'error');
+    }
+  }
+
+  /* ========================================================================
+     INIT
+     ======================================================================== */
+  async function showApp() {
+    $('login-screen').style.display = 'none';
+    $('main-app').style.display = 'block';
+    $('user-name').textContent = state.account.name || state.account.username;
+
+    // DSB-Mail = User-Mail (User IST die DSB, basierend auf vorheriger Wahl)
+    if (!CONFIG.dsbEmail) CONFIG.dsbEmail = state.account.username;
+
+    // Admin-Links einblenden wenn User als Redaktor definiert, ODER wenn editors leer ist (erstmal für alle zeigen)
+    if (CONFIG.editors.length === 0 || CONFIG.editors.includes(state.account.username)) {
+      $('admin-links').style.display = 'flex';
+    }
+
+    showStatus('Wiki wird geladen …', 'loading');
+    try {
+      await loadContext();
+      await loadFaq();
+      clearStatus();
+      renderCategories();
+      renderResults([], '');
+    } catch (err) {
+      console.error(err);
+      showStatus(`Fehler beim Laden: ${err.message}`, 'error');
+    }
+
+    // Search handler (debounced)
+    let timer;
+    $('search-input').addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(runSearch, 150);
+    });
+
+    $('btn-logout').addEventListener('click', async () => {
+      await msalInstance.logoutPopup({ postLogoutRedirectUri: CONFIG.redirectUri });
+    });
+  }
+
+  async function init() {
+    await msalInstance.initialize();
+    await msalInstance.handleRedirectPromise();
+
+    const accounts = msalInstance.getAllAccounts();
+    if (accounts.length > 0) {
+      msalInstance.setActiveAccount(accounts[0]);
+      state.account = accounts[0];
+      await showApp();
+    } else {
+      $('login-screen').style.display = 'block';
+      $('btn-login').addEventListener('click', async () => {
+        try {
+          const res = await msalInstance.loginPopup(loginRequest);
+          msalInstance.setActiveAccount(res.account);
+          state.account = res.account;
+          await showApp();
+        } catch (e) {
+          console.error(e);
+          alert('Anmeldung fehlgeschlagen: ' + e.message);
+        }
+      });
+    }
+  }
+
+  init();
+</script>
+
+</body>
+</html>
