@@ -535,10 +535,12 @@
     const site = await graph(`/sites/${CONFIG.siteHostname}:${CONFIG.sitePath}`);
     state.siteId = site.id;
 
-    const lists = await graph(`/sites/${state.siteId}/lists?$filter=displayName eq '${CONFIG.listFaq}' or displayName eq '${CONFIG.listOpen}'`);
+    // Alle Listen laden und clientseitig filtern (OData-Filter auf displayName
+    // wird von /lists nicht unterstützt)
+    const lists = await graph(`/sites/${state.siteId}/lists?$top=200`);
     for (const l of lists.value) {
-      if (l.displayName === CONFIG.listFaq) state.listFaqId = l.id;
-      if (l.displayName === CONFIG.listOpen) state.listOpenId = l.id;
+      if (l.displayName === CONFIG.listFaq || l.name === CONFIG.listFaq) state.listFaqId = l.id;
+      if (l.displayName === CONFIG.listOpen || l.name === CONFIG.listOpen) state.listOpenId = l.id;
     }
     if (!state.listFaqId) throw new Error(`Liste "${CONFIG.listFaq}" nicht gefunden`);
     if (!state.listOpenId) throw new Error(`Liste "${CONFIG.listOpen}" nicht gefunden`);
